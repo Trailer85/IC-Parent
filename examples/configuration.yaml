@@ -1,0 +1,18 @@
+# Infinite Campus poller snippets to merge into Home Assistant configuration.yaml.
+# Copy www/school-schedule.js to config/www/campus-parent/school-schedule.js first.
+
+frontend:
+  extra_module_url:
+    - /local/campus-parent/school-schedule.js?v=1
+
+template:
+  - binary_sensor:
+      - name: Campus sync stale
+        unique_id: campus_sync_stale
+        device_class: problem
+        icon: mdi:clock-alert-outline
+        state: >
+          {% set last = state_attr('sensor.campus_sync_status', 'last_success') %}
+          {{ last is none or (now() - as_datetime(last)).total_seconds() > 86400 }}
+        attributes:
+          last_success: "{{ state_attr('sensor.campus_sync_status', 'last_success') }}"

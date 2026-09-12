@@ -1,0 +1,125 @@
+# Infinite Campus poller automations. Paste into automations.yaml (or add via the UI).
+# Replace alex / sam with your student slugs, and notify.notify with your notifier.
+
+- id: campus_missing_increased
+  alias: Campus missing work increased
+  description: Notify when a student's missing-assignment count goes up
+  triggers:
+    - trigger: state
+      entity_id:
+        - sensor.alex_assignments_missing
+        - sensor.sam_assignments_missing
+  conditions:
+    - condition: template
+      value_template: >-
+        {{ trigger.from_state is not none
+           and trigger.to_state is not none
+           and trigger.from_state.state not in ['unknown', 'unavailable']
+           and trigger.to_state.state not in ['unknown', 'unavailable']
+           and (trigger.to_state.state | int(0)) > (trigger.from_state.state | int(0)) }}
+    - condition: state
+      entity_id: sensor.campus_sync_status
+      state: ok
+  actions:
+    - action: notify.notify
+      data:
+        title: "{{ state_attr(trigger.entity_id, 'kid') }} missing work"
+        message: >-
+          {% set items = trigger.to_state.attributes.assignments or [] %}
+          {{ trigger.to_state.state }} missing (was {{ trigger.from_state.state }}).
+          {% for a in items[:6] %} • {{ a.name }} · {{ a.course }}{% endfor %}
+        data:
+          url: /lovelace/school
+  mode: queued
+  max: 6
+
+- id: campus_new_scores
+  alias: Campus new scores
+  description: Notify when Infinite Campus posts a new assignment score or course grade
+  triggers:
+    - trigger: state
+      entity_id:
+        - sensor.alex_recent_scores
+        - sensor.sam_recent_scores
+      id: scores
+    - trigger: state
+      entity_id:
+        - sensor.alex_recent_grades
+        - sensor.sam_recent_grades
+      id: grades
+  conditions:
+    - condition: template
+      value_template: >-
+        {{ trigger.from_state is not none
+           and trigger.to_state is not none
+           and trigger.from_state.state not in ['unknown', 'unavailable']
+           and trigger.to_state.state not in ['unknown', 'unavailable'] }}
+    - condition: state
+      entity_id: sensor.campus_sync_status
+      state: ok
+    - condition: template
+      value_template: >-
+        {% set ns = namespace(old=[], added=0) %}
+        {% if trigger.id == 'grades' %}
+          {% set old_list = trigger.from_state.attributes.get('grades') or [] %}
+          {% set new_list = trigger.to_state.attributes.get('grades') or [] %}
+          {% for g in old_list %}
+            {% set ns.old = ns.old + [g.course ~ '|' ~ (g.task | default('')) ~ '|' ~ (g.score | string)] %}
+          {% endfor %}
+          {% for g in new_list %}
+            {% set k = g.course ~ '|' ~ (g.task | default('')) ~ '|' ~ (g.score | string) %}
+            {% if k not in ns.old %}{% set ns.added = ns.added + 1 %}{% endif %}
+          {% endfor %}
+        {% else %}
+          {% set old_list = trigger.from_state.attributes.get('assignments') or [] %}
+          {% set new_list = trigger.to_state.attributes.get('assignments') or [] %}
+          {% for a in old_list %}
+            {% set ns.old = ns.old + [a.name ~ '|' ~ a.course ~ '|' ~ (a.score | string)] %}
+          {% endfor %}
+          {% for a in new_list %}
+            {% set k = a.name ~ '|' ~ a.course ~ '|' ~ (a.score | string) %}
+            {% if k not in ns.old %}{% set ns.added = ns.added + 1 %}{% endif %}
+          {% endfor %}
+        {% endif %}
+        {{ ns.added > 0 }}
+  actions:
+    - action: notify.notify
+      data:
+        title: >-
+          {% if trigger.id == 'grades' %}
+            {{ state_attr(trigger.entity_id, 'kid') }} course grade
+          {% else %}
+            {{ state_attr(trigger.entity_id, 'kid') }} new score
+          {% endif %}
+        message: >-
+          {% set ns = namespace(old=[], lines=[]) %}
+          {% if trigger.id == 'grades' %}
+            {% set old_list = trigger.from_state.attributes.get('grades') or [] %}
+            {% set new_list = trigger.to_state.attributes.get('grades') or [] %}
+            {% for g in old_list %}
+              {% set ns.old = ns.old + [g.course ~ '|' ~ (g.task | default('')) ~ '|' ~ (g.score | string)] %}
+            {% endfor %}
+            {% for g in new_list %}
+              {% set k = g.course ~ '|' ~ (g.task | default('')) ~ '|' ~ (g.score | string) %}
+              {% if k not in ns.old %}
+                {% set ns.lines = ns.lines + [g.course ~ (' · ' ~ g.task if g.task else '') ~ ' · ' ~ (g.score | string)] %}
+              {% endif %}
+            {% endfor %}
+          {% else %}
+            {% set old_list = trigger.from_state.attributes.get('assignments') or [] %}
+            {% set new_list = trigger.to_state.attributes.get('assignments') or [] %}
+            {% for a in old_list %}
+              {% set ns.old = ns.old + [a.name ~ '|' ~ a.course ~ '|' ~ (a.score | string)] %}
+            {% endfor %}
+            {% for a in new_list %}
+              {% set k = a.name ~ '|' ~ a.course ~ '|' ~ (a.score | string) %}
+              {% if k not in ns.old %}
+                {% set ns.lines = ns.lines + [a.name ~ ' · ' ~ a.course ~ ' · ' ~ (a.score | string)] %}
+              {% endif %}
+            {% endfor %}
+          {% endif %}
+          {{ ns.lines[:6] | join(' | ') }}
+        data:
+          url: /lovelace/school
+  mode: queued
+  max: 6

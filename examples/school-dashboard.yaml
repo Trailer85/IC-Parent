@@ -1,0 +1,153 @@
+# Infinite Campus poller School view for a Lovelace sections dashboard.
+# Replace alex / sam / Alex / Sam with your student slugs and display names.
+# Path `school` matches the notify URLs in examples/automations.yaml.
+#
+# For colored missing/score chips, paste the markdown from kid-card.md
+# in place of each student's second markdown card.
+
+views:
+  - type: sections
+    path: school
+    title: School
+    icon: mdi:school
+    max_columns: 3
+    sections:
+      - type: grid
+        column_span: 3
+        visibility:
+          - condition: state
+            entity: binary_sensor.campus_sync_stale
+            state: "on"
+        cards:
+          - type: markdown
+            content: >
+              <font color="#fb923c"><b>Infinite Campus data is more than 24 hours
+              old.</b></font>
+              {% set last = state_attr('sensor.campus_sync_status', 'last_success') %}
+              {% if last %} Last successful pull
+              {{ as_datetime(last).strftime('%-I:%M %p, %b %-d') }}.{% endif %}
+            grid_options:
+              columns: 12
+              rows: auto
+
+      - type: grid
+        column_span: 1
+        cards:
+          - type: markdown
+            content: "# **Alex**"
+            grid_options:
+              columns: 12
+              rows: auto
+          - type: tile
+            entity: sensor.alex_schedule_today
+            name: Today's Schedule
+            icon: mdi:calendar-clock
+            hide_state: true
+            grid_options:
+              columns: 12
+              rows: 1
+          - type: markdown
+            content: |
+              **Missing** ({{ states('sensor.alex_assignments_missing') }})
+              {% set items = state_attr('sensor.alex_assignments_missing', 'assignments') or [] %}
+              {% if items | length == 0 %}_None_{% else %}
+              {% for a in items %}
+              - {{ a.name }} · {{ a.course }}
+              {% endfor %}
+              {% endif %}
+
+              **Due today** ({{ states('sensor.alex_assignments_due_today') }})
+              {% set items = state_attr('sensor.alex_assignments_due_today', 'assignments') or [] %}
+              {% if items | length == 0 %}_None_{% else %}
+              {% for a in items %}
+              - {{ a.name }} · {{ a.course }}
+              {% endfor %}
+              {% endif %}
+
+              **Due tomorrow** ({{ states('sensor.alex_assignments_due_tomorrow') }})
+              {% set items = state_attr('sensor.alex_assignments_due_tomorrow', 'assignments') or [] %}
+              {% if items | length == 0 %}_None_{% else %}
+              {% for a in items %}
+              - {{ a.name }} · {{ a.course }}
+              {% endfor %}
+              {% endif %}
+
+              **Recent scores**
+              {% set items = (state_attr('sensor.alex_recent_scores', 'assignments') or [])[:8] %}
+              {% if items | length == 0 %}_None_{% else %}
+              {% for a in items %}
+              - {{ a.name }} · {{ a.course }} · {{ a.score }}
+              {% endfor %}
+              {% endif %}
+
+              **Recent grades**
+              {% set items = (state_attr('sensor.alex_recent_grades', 'grades') or [])[:8] %}
+              {% if items | length == 0 %}_None_{% else %}
+              {% for g in items %}
+              - {{ g.course }}{% if g.task %} · {{ g.task }}{% endif %} · {{ g.score }}
+              {% endfor %}
+              {% endif %}
+            grid_options:
+              columns: 12
+              rows: auto
+
+      - type: grid
+        column_span: 1
+        cards:
+          - type: markdown
+            content: "# **Sam**"
+            grid_options:
+              columns: 12
+              rows: auto
+          - type: tile
+            entity: sensor.sam_schedule_today
+            name: Today's Schedule
+            icon: mdi:calendar-clock
+            hide_state: true
+            grid_options:
+              columns: 12
+              rows: 1
+          - type: markdown
+            content: |
+              **Missing** ({{ states('sensor.sam_assignments_missing') }})
+              {% set items = state_attr('sensor.sam_assignments_missing', 'assignments') or [] %}
+              {% if items | length == 0 %}_None_{% else %}
+              {% for a in items %}
+              - {{ a.name }} · {{ a.course }}
+              {% endfor %}
+              {% endif %}
+
+              **Due today** ({{ states('sensor.sam_assignments_due_today') }})
+              {% set items = state_attr('sensor.sam_assignments_due_today', 'assignments') or [] %}
+              {% if items | length == 0 %}_None_{% else %}
+              {% for a in items %}
+              - {{ a.name }} · {{ a.course }}
+              {% endfor %}
+              {% endif %}
+
+              **Due tomorrow** ({{ states('sensor.sam_assignments_due_tomorrow') }})
+              {% set items = state_attr('sensor.sam_assignments_due_tomorrow', 'assignments') or [] %}
+              {% if items | length == 0 %}_None_{% else %}
+              {% for a in items %}
+              - {{ a.name }} · {{ a.course }}
+              {% endfor %}
+              {% endif %}
+
+              **Recent scores**
+              {% set items = (state_attr('sensor.sam_recent_scores', 'assignments') or [])[:8] %}
+              {% if items | length == 0 %}_None_{% else %}
+              {% for a in items %}
+              - {{ a.name }} · {{ a.course }} · {{ a.score }}
+              {% endfor %}
+              {% endif %}
+
+              **Recent grades**
+              {% set items = (state_attr('sensor.sam_recent_grades', 'grades') or [])[:8] %}
+              {% if items | length == 0 %}_None_{% else %}
+              {% for g in items %}
+              - {{ g.course }}{% if g.task %} · {{ g.task }}{% endif %} · {{ g.score }}
+              {% endfor %}
+              {% endif %}
+            grid_options:
+              columns: 12
+              rows: auto
