@@ -1,0 +1,12 @@
+# Infinite Campus poller sidecar. Same host as Home Assistant.
+services:
+  campus-sync:
+    build: .
+    container_name: campus-sync
+    restart: unless-stopped
+    network_mode: host
+    env_file:
+      - secrets.env
+    environment:
+      - TZ=${TZ:-America/New_York}
+      - CAMPUS_RUN_ON_START=1
